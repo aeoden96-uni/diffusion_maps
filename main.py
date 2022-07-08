@@ -46,6 +46,7 @@ def make_A2(A_tilda, S1):
 
 
 def form(s, x):
+    return
     print(f'{s: <{10}}', x)
 
 
@@ -147,7 +148,7 @@ def main():
 
     Q_t = Q_tilda(S1, Q, epsilon)
 
-    print("Q_t", Q_t)
+    # print("Q_t", Q_t)
 
     K = np.zeros((N, N))
 
@@ -157,7 +158,7 @@ def main():
 
     K_t = K_tilda(K, S1, N)
 
-    print("K_t", K_t)
+    # print("K_t", K_t)
 
     A_t = A_tilda(Q_t, K_t, Q)
 
@@ -192,6 +193,7 @@ def main():
     form("ONM", ONM.shape)
 
     for k in range(1, N):
+
         S1_ = S1.copy()
         S2_ = S2.copy()
 
@@ -251,18 +253,19 @@ def main():
 
         beta = np.linalg.norm(ONM[k].dot(T) - ONM_[k])
 
+        print(k,beta)
+
         form("beta", beta)
 
 
         if beta > mi / 2:
             S1 = S1_
             S2 = S2_
-            A1 = A1_.copy()
-            A2 = A2_.copy()
+            A1 = A1_
+            A2 = A2_
             ONM = ONM_
 
-
-
+    print(ONM.shape)
 
 
 if __name__ == "__main__":
