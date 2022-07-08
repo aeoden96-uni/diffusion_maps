@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 from scipy.linalg import fractional_matrix_power
 
 
+def fmp(A):
+    return fractional_matrix_power(A, -0.5)
+
+
 # iid sampling of [0,1]
 def get_random_uniform_iid(n):
     return np.random.uniform(0, 1, n)
@@ -28,46 +32,21 @@ def rank(A):
 
 
 def ex(x, y, epsilon):
-    return math.exp(- np.linalg.norm(x - y) / epsilon)
+    return math.exp(- np.linalg.norm(x - y) ** 2 / epsilon)
 
 
-def make_A1(Q, dictionary, epsilon):
-    A1_new = np.zeros((len(dictionary), len(dictionary)))
-    # print(dictionary)
-    # print(len(dictionary))
-    # print("Q", Q.shape)
-    i, j = 0, 0
-    for key, value in dictionary.items():
-        j = 0
-        for key2, value2 in dictionary.items():
-            # print(i,j,key,key2)
-            A1_new[i][j] = ex(value, value2, epsilon) / math.sqrt(Q[key][key] * Q[key2][key2])
-
-            j += 1
-        i += 1
-    return np.array(A1_new)
+def make_A1(A_tilda, S1):
+    # 2x13 -> 2x2
+    # truncate A_tilda to 2x2
+    return A_tilda[:, :len(S1)]
 
 
-def make_A2(Q, S1, S2, epsilon, N):
-    A2_new = np.zeros((len(S1), N - len(S1)))
-    form ( "A2_new",A2_new.shape)
-    form ( "S1" , len(S1))
-    form ("S2", len(S2))
-    i, j = 0, 0
-    for key, value in S1.items():
-        j = 0
-        for key2, value2 in S2.items():
-            Q_ = Q[key][key] * Q[key2][key2]
-            new_val = ex(value, value2, epsilon) / math.sqrt(Q_)
-            A2_new[i][j] = new_val
-
-            j += 1
-        i += 1
-    return np.array(A2_new)
+def make_A2(A_tilda, S1):
+    return A_tilda[:, len(S1):]
 
 
-def form(s,x):
-    print(f'{s: <{10}}',x)
+def form(s, x):
+    print(f'{s: <{10}}', x)
 
 
 def make_C(A1, A2):
@@ -75,8 +54,49 @@ def make_C(A1, A2):
     return A1 + A1_f.dot(A2).dot(A2.transpose()).dot(A1_f)
 
 
+def K_tilda(K, S1, N):
+    # S1 = {
+    #     # first column of F
+    #     3: F[:, 3],
+    #     8: F[:, 8],
+    #
+    # }
+    K_tilda = np.zeros((len(S1), N))
+    S1_list_keys = [key for key in sorted(S1.keys())]
+
+    for i in range(len(S1)):
+        K_tilda[i, :] = K[S1_list_keys[i], :]
+
+    return K_tilda
+
+
+def A_tilda(Q_t, K_t, Q):
+    return fmp(Q_t).dot(K_t).dot(fmp(Q))
+
+
+def Q_tilda(S1, Q, epsilon):
+    S1_list = [S1[key] for key in sorted(S1.keys())]
+    S1_list_keys = [key for key in sorted(S1.keys())]
+
+    # S1 = {
+    #     # first column of F
+    #     3: F[:, 3],
+    #     8: F[:, 8],
+    #
+    # }
+    Q_tilda = np.diag(np.ones(len(S1)))
+    for i in range(len(S1_list)):
+        qi = 0
+        for j in range(len(S1_list)):
+            x = Q[S1_list_keys[i], S1_list_keys[i]] * Q[S1_list_keys[j], S1_list_keys[j]]
+
+            qi += ex(S1_list[i], S1_list[j], epsilon) / x
+        Q_tilda[i, i] = qi
+    return Q_tilda
+
+
 def main():
-    N = 13
+    N = 100
 
     x = np.array(get_random_coordinates(N, 3))
     # print(x)
@@ -86,8 +106,7 @@ def main():
 
     M = np.array([get_random_uniform_iid(3) for i in range(17)])
 
-
-    form("M shape",M.shape)
+    form("M shape", M.shape)
     form("M rank", rank(M))
 
     F = M.dot(x)
@@ -99,41 +118,56 @@ def main():
     mi = 7.8e-6
     form("Mi", mi)
 
+    # RIJECNICI
     S1 = {
-        0: F[:, 0]
+        # first column of F
+        0: F[:, 0],
+
     }
+
     S2 = {
 
     }
-
     for i in range(N - 1):
         S2[i + 1] = F[:, i + 1]
 
     # diagonal matrix
     Q = np.diag(np.ones(N))
 
-    for i in range(len(S1)):
+    for i in range(N):
         qi = 0
-        for j in range(len(S1)):
+        for j in range(N):
             qi += ex(F[:, i], F[:, j], epsilon)
         Q[i, i] = qi
 
+    # print matrix Q
+    # form("Q", Q)
+
     form("Q", Q.shape)
 
-    # empty matrix
-    A1 = np.zeros((len(S1), len(S1)))
-    A2 = np.zeros((len(S1), N - len(S1)))
+    Q_t = Q_tilda(S1, Q, epsilon)
+
+    print("Q_t", Q_t)
+
+    K = np.zeros((N, N))
+
+    for i in range(N):
+        for j in range(N):
+            K[i, j] = ex(F[:, i], F[:, j], epsilon)
+
+    K_t = K_tilda(K, S1, N)
+
+    print("K_t", K_t)
+
+    A_t = A_tilda(Q_t, K_t, Q)
+
+    form("A_tilda", A_t.shape)
+
+    A1 = make_A1(A_t, S1)
+    A2 = make_A2(A_t, S1)
 
     form("A1", A1.shape)
     form("A2", A2.shape)
-
-    # A1[0][0] = ex(S1[0], S1[0], epsilon) / math.sqrt(Q[0][0] * Q[0][0])
-    A1 = make_A1(Q, S1, epsilon)
-    A2 = make_A2(Q, S1, S2, epsilon, N)
-
-    A1_f = fractional_matrix_power(A1, -0.5)
-
-    form("A1_f", A1_f.shape)
 
     C = make_C(A1, A2)
 
@@ -146,12 +180,14 @@ def main():
     lam = np.diag(lam)
     form("lam", lam)
 
-    lam_f = fractional_matrix_power(lam, -0.5)
+    lam_f = fmp(lam)
+
+    A1_f = fmp(A1)
 
     fi_k = np.r_[A1, A2.transpose()].dot(A1_f).dot(fi).dot(lam_f)
     form("fi_k", fi_k.shape)
 
-    ONM = fractional_matrix_power(Q, -0.5).dot(fi_k).dot(lam)
+    ONM = fmp(Q).dot(fi_k).dot(lam)
 
     form("ONM", ONM.shape)
 
@@ -164,50 +200,67 @@ def main():
         form("S2_", len(S2_))
         del S2_[k]
         form("S2_", len(S2_))
-        A1_ = make_A1(Q, S1_, epsilon)
-        A2_ = make_A2(Q, S1_, S2_, epsilon, N)
-        A1_f_ = fractional_matrix_power(A1_, -0.5)
+
+        form("S1_", len(S1_))
+
+        Q_tt = Q_tilda(S1_, Q, epsilon)
+        K_tt = K_tilda(K, S1_, N)
+
+        A_ = A_tilda(Q_tt, K_tt, Q)
+
+        A1_ = make_A1(A_, S1_)
+        A2_ = make_A2(A_, S1_)
+
         C_ = make_C(A1_, A2_)
 
         fi_, lam_, _ = np.linalg.svd(C_)
         lam_ = np.diag(lam_)
-
         lam_f_ = fractional_matrix_power(lam_, -0.5)
 
-
-
-        form("A1_",A1_.shape)
+        form("A1_", A1_.shape)
         form("A2_", A2_.shape)
         # form("A1_f_", A1_f_.shape)
         # form("C_", C_.shape)
         # form("fi_", fi_.shape)
         # form("lam_", lam_.shape)
         # form("lam_f_", lam_f_.shape)
-
+        A1_f_ = fractional_matrix_power(A1_, -0.5)
         fi_k_ = np.r_[A1_, A2_.transpose()].dot(A1_f_).dot(fi_).dot(lam_f_)
 
-        ONM_ = np.array(fractional_matrix_power(Q, -0.5).dot(fi_k_).dot(lam_))
+        ONM_ = np.array(fmp(Q).dot(fi_k_).dot(lam_))
 
         form("ONM_", ONM_.shape)
 
-        T = ONM.transpose().dot(ONM_)
+        S1_list_keys = [key for key in sorted(S1_.keys())]
 
-        form("T",T.shape)
+        B = np.zeros((len(S1_), len(S1_) - 1))
+        for i in range(len(S1_list_keys)):
+            B[i, :] = ONM[S1_list_keys[i], :]
 
+        form("B", B.shape)
 
+        D = np.zeros((len(S1_), len(S1_)))
+        for i in range(len(S1_list_keys)):
+            D[i, :]= ONM_[S1_list_keys[i], :]
+
+        form("D", D.shape)
+
+        T = B.transpose().dot(D)
+
+        form("T", T.shape)
 
         beta = np.linalg.norm(ONM[k].dot(T) - ONM_[k])
 
         form("beta", beta)
 
-        if beta > mi/2:
+
+        if beta > mi / 2:
             S1 = S1_
             S2 = S2_
-            A1 = A1_
-            A2 = A2_
+            A1 = A1_.copy()
+            A2 = A2_.copy()
             ONM = ONM_
 
-    form("ONM",ONM.shape)
 
 
 
