@@ -4,6 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import fractional_matrix_power
 
+import matplotlib.pyplot as plt
+from numpy import asarray
+from numpy import savetxt
+
+from mpl_toolkits.mplot3d import Axes3D
+
 
 def fmp(A):
     return fractional_matrix_power(A, -0.5)
@@ -32,7 +38,7 @@ def rank(A):
 
 
 def ex(x, y, epsilon):
-    return math.exp(- np.linalg.norm(x - y) ** 2 / epsilon)
+    return math.exp(- (np.linalg.norm(x - y) ** 2) / epsilon)
 
 
 def make_A1(A_tilda, S1):
@@ -75,7 +81,7 @@ def A_tilda(Q_t, K_t, Q):
     return fmp(Q_t).dot(K_t).dot(fmp(Q))
 
 
-def Q_tilda(S1, Q, epsilon):
+def Q_tilda(S1, F, epsilon, N):
     S1_list = [S1[key] for key in sorted(S1.keys())]
     S1_list_keys = [key for key in sorted(S1.keys())]
 
@@ -88,24 +94,40 @@ def Q_tilda(S1, Q, epsilon):
     Q_tilda = np.diag(np.ones(len(S1)))
     for i in range(len(S1_list)):
         qi = 0
-        for j in range(len(S1_list)):
-            x = Q[S1_list_keys[i], S1_list_keys[i]] * Q[S1_list_keys[j], S1_list_keys[j]]
-
-            qi += ex(S1_list[i], S1_list[j], epsilon) / x
+        for j in range(N):
+            qi += ex(S1_list[i], F[:, j], epsilon)
         Q_tilda[i, i] = qi
     return Q_tilda
 
 
 def main():
-    N = 100
+    N = 500
 
-    x = np.array(get_random_coordinates(N, 3))
+    x = np.loadtxt('x4.csv', delimiter=',')
+
+    fig = plt.figure()
+
+    ax = fig.add_subplot(projection='3d')
+
+    ax.axes.xaxis.set_ticks([])
+    ax.axes.yaxis.set_ticks([])
+    ax.axes.zaxis.set_ticks([])
+
+    for i in range(N):
+        ax.scatter3D(x[0, i], x[1, i], x[2, i])
+
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+
+    plt.show(block=False)
+
     # print(x)
     # print(x[0][0] ** 2 + x[1][0] ** 2 + x[2][0] ** 2)
 
     form("x shape", x.shape)
 
-    M = np.array([get_random_uniform_iid(3) for i in range(17)])
+    M = np.loadtxt('M4.csv', delimiter=',')
 
     form("M shape", M.shape)
     form("M rank", rank(M))
@@ -146,7 +168,7 @@ def main():
 
     form("Q", Q.shape)
 
-    Q_t = Q_tilda(S1, Q, epsilon)
+    Q_t = Q_tilda(S1, F, epsilon, N)
 
     # print("Q_t", Q_t)
 
@@ -205,14 +227,13 @@ def main():
 
         form("S1_", len(S1_))
 
-        Q_tt = Q_tilda(S1_, Q, epsilon)
+        Q_tt = Q_tilda(S1_, F, epsilon, N)
         K_tt = K_tilda(K, S1_, N)
 
         A_ = A_tilda(Q_tt, K_tt, Q)
 
         A1_ = make_A1(A_, S1_)
         A2_ = make_A2(A_, S1_)
-
         C_ = make_C(A1_, A2_)
 
         fi_, lam_, _ = np.linalg.svd(C_)
@@ -233,15 +254,15 @@ def main():
 
         form("ONM_", ONM_.shape)
 
-        S1_list_keys = [key for key in sorted(S1_.keys())]
+        S1_list_keys = [key for key in sorted(S1.keys())]
 
-        B = np.zeros((len(S1_), len(S1_) - 1))
+        B = np.zeros((len(S1), len(S1)), dtype=complex)
         for i in range(len(S1_list_keys)):
             B[i, :] = ONM[S1_list_keys[i], :]
 
         form("B", B.shape)
 
-        D = np.zeros((len(S1_), len(S1_)))
+        D = np.zeros((len(S1), len(S1_)), dtype=complex)
         for i in range(len(S1_list_keys)):
             D[i, :]= ONM_[S1_list_keys[i], :]
 
@@ -250,22 +271,34 @@ def main():
         T = B.transpose().dot(D)
 
         form("T", T.shape)
-
-        beta = np.linalg.norm(ONM[k].dot(T) - ONM_[k])
-
-        print(k,beta)
+        beta = np.linalg.norm(ONM[k, :].dot(T) - ONM_[k, :]) / max(np.linalg.norm(ONM[k, :].dot(T)), np.linalg.norm(ONM_[k, :]))
 
         form("beta", beta)
 
 
-        if beta > mi / 2:
+        if abs(1-beta) > mi / 2:
             S1 = S1_
             S2 = S2_
-            A1 = A1_
-            A2 = A2_
             ONM = ONM_
 
     print(ONM.shape)
+
+    fig = plt.figure()
+
+    ax = fig.add_subplot(projection='3d')
+
+    ax.axes.xaxis.set_ticks([])
+    ax.axes.yaxis.set_ticks([])
+    ax.axes.zaxis.set_ticks([])
+
+    for i in range(N):
+        ax.scatter3D(ONM[i, 0].real, ONM[i, 1].real, ONM[i, 2].real)
+
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+
+    plt.show()
 
 
 if __name__ == "__main__":
