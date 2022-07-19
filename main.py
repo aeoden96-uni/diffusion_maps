@@ -1,14 +1,16 @@
 import math
 
 import numpy as np
-import matplotlib.pyplot as plt
+
 from scipy.linalg import fractional_matrix_power
 
 import matplotlib.pyplot as plt
-from numpy import asarray
-from numpy import savetxt
 
-from mpl_toolkits.mplot3d import Axes3D
+
+# from numpy import asarray
+# from numpy import savetxt
+#
+# from mpl_toolkits.mplot3d import Axes3D
 
 
 def fmp(A):
@@ -41,19 +43,19 @@ def ex(x, y, epsilon):
     return math.exp(- (np.linalg.norm(x - y) ** 2) / epsilon)
 
 
-def make_A1(A_tilda, S1):
+def make_A1(A_tilda_, S1):
     # 2x13 -> 2x2
     # truncate A_tilda to 2x2
-    return A_tilda[:, :len(S1)]
+    return A_tilda_[:, :len(S1)]
 
 
-def make_A2(A_tilda, S1):
-    return A_tilda[:, len(S1):]
+def make_A2(A_tilda_, S1):
+    return A_tilda_[:, len(S1):]
 
 
 def form(s, x):
-    return
     print(f'{s: <{10}}', x)
+    return
 
 
 def make_C(A1, A2):
@@ -68,13 +70,13 @@ def K_tilda(K, S1, N):
     #     8: F[:, 8],
     #
     # }
-    K_tilda = np.zeros((len(S1), N))
+    K_tilda_ = np.zeros((len(S1), N))
     S1_list_keys = [key for key in sorted(S1.keys())]
 
     for i in range(len(S1)):
-        K_tilda[i, :] = K[S1_list_keys[i], :]
+        K_tilda_[i, :] = K[S1_list_keys[i], :]
 
-    return K_tilda
+    return K_tilda_
 
 
 def A_tilda(Q_t, K_t, Q):
@@ -83,7 +85,7 @@ def A_tilda(Q_t, K_t, Q):
 
 def Q_tilda(S1, F, epsilon, N):
     S1_list = [S1[key] for key in sorted(S1.keys())]
-    S1_list_keys = [key for key in sorted(S1.keys())]
+    # S1_list_keys = [key for key in sorted(S1.keys())]
 
     # S1 = {
     #     # first column of F
@@ -91,19 +93,33 @@ def Q_tilda(S1, F, epsilon, N):
     #     8: F[:, 8],
     #
     # }
-    Q_tilda = np.diag(np.ones(len(S1)))
+    Q_tilda_ = np.diag(np.ones(len(S1)))
     for i in range(len(S1_list)):
         qi = 0
         for j in range(N):
             qi += ex(S1_list[i], F[:, j], epsilon)
-        Q_tilda[i, i] = qi
-    return Q_tilda
+        Q_tilda_[i, i] = qi
+    return Q_tilda_
 
 
-def main():
-    N = 500
+def draw(ONM, N, name):
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.axes.xaxis.set_ticks([])
+    ax.axes.yaxis.set_ticks([])
+    ax.axes.zaxis.set_ticks([])
+    for i in range(N):
+        ax.scatter3D(ONM[i, 0].real, ONM[i, 1].real, ONM[i, 2].real)
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
 
-    x = np.loadtxt('x4.csv', delimiter=',')
+    plt.title(name)
+    plt.show()
+
+
+def draw_x(x, N):
+
 
     fig = plt.figure()
 
@@ -120,17 +136,44 @@ def main():
     ax.set_ylabel('y')
     ax.set_zlabel('z')
 
+    plt.title('Ulazni podaci')
     plt.show(block=False)
 
-    # print(x)
-    # print(x[0][0] ** 2 + x[1][0] ** 2 + x[2][0] ** 2)
+
+def draw_M(M):
+    fig = plt.figure()
+
+    ax = fig.add_subplot(projection='3d')
+
+    ax.axes.xaxis.set_ticks([])
+    ax.axes.yaxis.set_ticks([])
+    ax.axes.zaxis.set_ticks([])
+
+    for i in range(M.shape[0]):
+        ax.scatter3D(M[i, 0], M[i, 1], M[i, 2])
+
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+
+    plt.title('M')
+    plt.show(block=False)
+
+
+def main():
+    N = 500
+    x = np.loadtxt('x4.csv', delimiter=',')
+
+    draw_x(x, N)
 
     form("x shape", x.shape)
 
     M = np.loadtxt('M4.csv', delimiter=',')
-
     form("M shape", M.shape)
     form("M rank", rank(M))
+    draw_M(M)
+
+
 
     F = M.dot(x)
     # print("F",F)
@@ -264,41 +307,25 @@ def main():
 
         D = np.zeros((len(S1), len(S1_)), dtype=complex)
         for i in range(len(S1_list_keys)):
-            D[i, :]= ONM_[S1_list_keys[i], :]
+            D[i, :] = ONM_[S1_list_keys[i], :]
 
         form("D", D.shape)
 
         T = B.transpose().dot(D)
 
         form("T", T.shape)
-        beta = np.linalg.norm(ONM[k, :].dot(T) - ONM_[k, :]) / max(np.linalg.norm(ONM[k, :].dot(T)), np.linalg.norm(ONM_[k, :]))
+        beta = np.linalg.norm(ONM[k, :].dot(T) - ONM_[k, :]) / max(np.linalg.norm(ONM[k, :].dot(T)),
+                                                                   np.linalg.norm(ONM_[k, :]))
 
         form("beta", beta)
 
-
-        if abs(1-beta) > mi / 2:
+        if abs(1 - beta) > mi / 2:
             S1 = S1_
             S2 = S2_
             ONM = ONM_
 
     print(ONM.shape)
-
-    fig = plt.figure()
-
-    ax = fig.add_subplot(projection='3d')
-
-    ax.axes.xaxis.set_ticks([])
-    ax.axes.yaxis.set_ticks([])
-    ax.axes.zaxis.set_ticks([])
-
-    for i in range(N):
-        ax.scatter3D(ONM[i, 0].real, ONM[i, 1].real, ONM[i, 2].real)
-
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlabel('z')
-
-    plt.show()
+    draw(ONM, N, "ONM")
 
 
 if __name__ == "__main__":
