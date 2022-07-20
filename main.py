@@ -54,8 +54,9 @@ def make_A2(A_tilda_, S1):
 
 
 def form(s, x):
-    print(f'{s: <{10}}', x)
     return
+    print(f'{s: <{10}}', x)
+
 
 
 def make_C(A1, A2):
@@ -169,6 +170,12 @@ def main():
     form("x shape", x.shape)
 
     M = np.loadtxt('M4.csv', delimiter=',')
+
+
+    # R3 u R17
+
+
+
     form("M shape", M.shape)
     form("M rank", rank(M))
     draw_M(M)
@@ -179,6 +186,8 @@ def main():
     # print("F",F)
     form("F shape", F.shape)
 
+
+    # mi i epsilon u clanku :HIPERPARAMETRI
     epsilon = 1
     form("Epsilon", epsilon)
     mi = 7.8e-6
