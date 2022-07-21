@@ -54,9 +54,7 @@ def make_A2(A_tilda_, S1):
 
 
 def form(s, x):
-    return
     print(f'{s: <{10}}', x)
-
 
 
 def make_C(A1, A2):
@@ -103,9 +101,16 @@ def Q_tilda(S1, F, epsilon, N):
     return Q_tilda_
 
 
-def draw(ONM, N, name):
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
+def draw(ONM, N, name, all=False):
+    # draw subplots
+    fig = plt.figure(figsize=plt.figaspect(0.5))
+
+    # =============
+    # First subplot
+    # =============
+    # set up the axes for the first plot
+    ax = fig.add_subplot(2, 2, 1, projection='3d')
+
     ax.axes.xaxis.set_ticks([])
     ax.axes.yaxis.set_ticks([])
     ax.axes.zaxis.set_ticks([])
@@ -115,13 +120,47 @@ def draw(ONM, N, name):
     ax.set_ylabel('y')
     ax.set_zlabel('z')
 
-    plt.title(name)
+    # ==============
+    # Second subplot
+    # ==============
+    # set up the axes for the second plot
+    ax = fig.add_subplot(2, 2, 2, projection='3d')
+
+    ax.axes.xaxis.set_ticks([])
+    ax.axes.yaxis.set_ticks([])
+    ax.axes.zaxis.set_ticks([])
+    for i in range(N):
+        ax.scatter3D(ONM[i, 3].real, ONM[i, 4].real, ONM[i, 5].real)
+    ax.set_xlabel('q')
+    ax.set_ylabel('s')
+    ax.set_zlabel('t')
+
+    ax = fig.add_subplot(2, 2, 3, projection='3d')
+
+    ax.axes.xaxis.set_ticks([])
+    ax.axes.yaxis.set_ticks([])
+    ax.axes.zaxis.set_ticks([])
+    for i in range(N):
+        ax.scatter3D(ONM[i, 6].real, ONM[i, 7].real, ONM[i, 8].real)
+    ax.set_xlabel('a')
+    ax.set_ylabel('b')
+    ax.set_zlabel('c')
+
+    ax = fig.add_subplot(2, 2, 4, projection='3d')
+
+    ax.axes.xaxis.set_ticks([])
+    ax.axes.yaxis.set_ticks([])
+    ax.axes.zaxis.set_ticks([])
+    for i in range(N):
+        ax.scatter3D(ONM[i, 0].real, ONM[i, 3].real, ONM[i, 6].real)
+    ax.set_xlabel('x')
+    ax.set_ylabel('q')
+    ax.set_zlabel('a')
+
     plt.show()
 
 
 def draw_x(x, N):
-
-
     fig = plt.figure()
 
     ax = fig.add_subplot(projection='3d')
@@ -162,7 +201,7 @@ def draw_M(M):
 
 
 def main():
-    N = 500
+    N = 100
     x = np.loadtxt('x4.csv', delimiter=',')
 
     draw_x(x, N)
@@ -171,21 +210,15 @@ def main():
 
     M = np.loadtxt('M4.csv', delimiter=',')
 
-
     # R3 u R17
-
-
 
     form("M shape", M.shape)
     form("M rank", rank(M))
     draw_M(M)
 
-
-
     F = M.dot(x)
     # print("F",F)
     form("F shape", F.shape)
-
 
     # mi i epsilon u clanku :HIPERPARAMETRI
     epsilon = 1
@@ -272,12 +305,12 @@ def main():
         S2_ = S2.copy()
 
         S1_[k] = F[:, k]
-        form("S1_", len(S1_))
-        form("S2_", len(S2_))
+        # form("S1_", len(S1_))
+        # form("S2_", len(S2_))
         del S2_[k]
-        form("S2_", len(S2_))
+        # form("S2_", len(S2_))
 
-        form("S1_", len(S1_))
+        # form("S1_", len(S1_))
 
         Q_tt = Q_tilda(S1_, F, epsilon, N)
         K_tt = K_tilda(K, S1_, N)
@@ -292,8 +325,8 @@ def main():
         lam_ = np.diag(lam_)
         lam_f_ = fractional_matrix_power(lam_, -0.5)
 
-        form("A1_", A1_.shape)
-        form("A2_", A2_.shape)
+        # form("A1_", A1_.shape)
+        # form("A2_", A2_.shape)
         # form("A1_f_", A1_f_.shape)
         # form("C_", C_.shape)
         # form("fi_", fi_.shape)
@@ -304,7 +337,7 @@ def main():
 
         ONM_ = np.array(fmp(Q).dot(fi_k_).dot(lam_))
 
-        form("ONM_", ONM_.shape)
+        # form("ONM_", ONM_.shape)
 
         S1_list_keys = [key for key in sorted(S1.keys())]
 
@@ -312,29 +345,30 @@ def main():
         for i in range(len(S1_list_keys)):
             B[i, :] = ONM[S1_list_keys[i], :]
 
-        form("B", B.shape)
+        # form("B", B.shape)
 
         D = np.zeros((len(S1), len(S1_)), dtype=complex)
         for i in range(len(S1_list_keys)):
             D[i, :] = ONM_[S1_list_keys[i], :]
 
-        form("D", D.shape)
+        # form("D", D.shape)
 
         T = B.transpose().dot(D)
 
-        form("T", T.shape)
+        # form("T", T.shape)
         beta = np.linalg.norm(ONM[k, :].dot(T) - ONM_[k, :]) / max(np.linalg.norm(ONM[k, :].dot(T)),
                                                                    np.linalg.norm(ONM_[k, :]))
 
-        form("beta", beta)
+        # form("beta", beta)
 
+        # UVJET
         if abs(1 - beta) > mi / 2:
             S1 = S1_
             S2 = S2_
             ONM = ONM_
 
     print(ONM.shape)
-    draw(ONM, N, "ONM")
+    draw(ONM, N, "ONM", all=True)
 
 
 if __name__ == "__main__":
